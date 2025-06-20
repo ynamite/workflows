@@ -59,7 +59,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile --ignore-scripts=false
+          pnpm config set auto-install-peers true
+          pnpm config set shamefully-hoist true        
+          pnpm install --frozen-lockfile
         env:
           PNPM_APPROVE_ALL_BUILDS: true
 
