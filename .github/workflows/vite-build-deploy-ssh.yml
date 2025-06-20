@@ -127,21 +127,21 @@ jobs:
             fi
           "
 
-      - name: Rollback on failure
-        if: failure()
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            if [ -d '${{ secrets.DEPLOY_PATH }}/backup' ]; then
-              rm -rf ${{ secrets.DEPLOY_PATH }}/current
-              mv ${{ secrets.DEPLOY_PATH }}/backup ${{ secrets.DEPLOY_PATH }}/current
-              echo 'Rollback completed'
-              # Set permissions after rollback
-              if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
-                find ${{ secrets.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
-                find ${{ secrets.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
-                echo 'Rollback permissions set'
-              fi
-            else
-              echo 'No backup available for rollback'
-            fi
-          "
+      # - name: Rollback on failure
+      #   if: failure()
+      #   run: |
+      #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+      #       if [ -d '${{ secrets.DEPLOY_PATH }}/backup' ]; then
+      #         rm -rf ${{ secrets.DEPLOY_PATH }}/current
+      #         mv ${{ secrets.DEPLOY_PATH }}/backup ${{ secrets.DEPLOY_PATH }}/current
+      #         echo 'Rollback completed'
+      #         # Set permissions after rollback
+      #         if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
+      #           find ${{ secrets.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
+      #           find ${{ secrets.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
+      #           echo 'Rollback permissions set'
+      #         fi
+      #       else
+      #         echo 'No backup available for rollback'
+      #       fi
+      #     "
