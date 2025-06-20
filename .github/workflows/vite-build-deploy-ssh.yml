@@ -60,7 +60,9 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm approve-builds
 
       - name: Build project
         run: ${{ inputs.build-command }}
@@ -87,7 +89,8 @@ jobs:
               mv ${{ secrets.DEPLOY_PATH }}/current ${{ secrets.DEPLOY_PATH }}/backup
             fi
             # Clean up any existing temp directory
-            rm -rf ${{ secrets.DEPLOY_PATH }}/temp            
+            rm -rf ${{ secrets.DEPLOY_PATH }}/temp   
+            mkdir -p ${{ secrets.DEPLOY_PATH }}/temp         
           "
 
           # Upload new build directly to temp directory
