@@ -1,0 +1,113 @@
+name: Vite Build and Deploy via SSH workflow
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        default: '18'
+        type: string
+      build-command:
+        description: 'Build command to run'
+        required: false
+        default: 'pnpm run build'
+        type: string
+      dist-folder:
+        description: 'Distribution folder name'
+        required: false
+        default: 'dist'
+        type: string
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
+      SSH_HOST:
+        required: true
+      SSH_USER:
+        required: true
+      DEPLOY_PATH:
+        required: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: latest
+        
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+        
+    - name: Setup pnpm cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+        
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      
+    - name: Build project
+      run: ${{ inputs.build-command }}
+      
+    - name: Setup SSH key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        
+    - name: Add server to known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        
+    - name: Deploy to server
+      run: |
+        # Create deployment directory if it doesn't exist
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.DEPLOY_PATH }}"
+        
+        # Create backup of current deployment
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
+            rm -rf ${{ secrets.DEPLOY_PATH }}/backup
+            mv ${{ secrets.DEPLOY_PATH }}/current ${{ secrets.DEPLOY_PATH }}/backup
+          fi
+        "
+        
+        # Upload new build
+        scp -r ${{ inputs.dist-folder }}/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/temp/
+        
+        # Move temp to current
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          mv ${{ secrets.DEPLOY_PATH }}/temp ${{ secrets.DEPLOY_PATH }}/current
+        "
+        
+    - name: Health check
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "curl -f http://localhost/health || exit 1"
+        echo "Deployment completed successfully"
+        
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          if [ -d '${{ secrets.DEPLOY_PATH }}/backup' ]; then
+            rm -rf ${{ secrets.DEPLOY_PATH }}/current
+            mv ${{ secrets.DEPLOY_PATH }}/backup ${{ secrets.DEPLOY_PATH }}/current
+            echo 'Rollback completed'
+          fi
+        "
