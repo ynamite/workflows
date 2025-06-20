@@ -25,8 +25,6 @@ on:
         required: true
       SSH_USER:
         required: true
-      DEPLOY_PATH:
-        required: true
 
 jobs:
   build-and-deploy:
@@ -80,38 +78,38 @@ jobs:
       - name: Deploy to server
         run: |
           # Create deployment directories if they don't exist
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.DEPLOY_PATH }}"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ vars.DEPLOY_PATH }}"
 
           # Create backup of current deployment and remove current
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
-              rm -rf ${{ secrets.DEPLOY_PATH }}/backup
-              mv ${{ secrets.DEPLOY_PATH }}/current ${{ secrets.DEPLOY_PATH }}/backup
+            if [ -d '${{ vars.DEPLOY_PATH }}/current' ]; then
+              rm -rf ${{ vars.DEPLOY_PATH }}/backup
+              mv ${{ vars.DEPLOY_PATH }}/current ${{ vars.DEPLOY_PATH }}/backup
             fi
             # Clean up any existing temp directory
-            rm -rf ${{ secrets.DEPLOY_PATH }}/temp   
-            mkdir -p ${{ secrets.DEPLOY_PATH }}/temp         
+            rm -rf ${{ vars.DEPLOY_PATH }}/temp   
+            mkdir -p ${{ vars.DEPLOY_PATH }}/temp         
           "
 
           # Upload new build directly to temp directory
-          scp -r ${{ inputs.dist-folder }}/. ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/temp/
+          scp -r ${{ inputs.dist-folder }}/. ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/temp/
 
           # Move temp to current (ensure current doesn't exist first)
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             # Double-check current is gone (should be moved to backup above)
-            if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
+            if [ -d '${{ vars.DEPLOY_PATH }}/current' ]; then
               echo 'Warning: current directory still exists, removing it'
-              rm -rf ${{ secrets.DEPLOY_PATH }}/current
+              rm -rf ${{ vars.DEPLOY_PATH }}/current
             fi
-            mv ${{ secrets.DEPLOY_PATH }}/temp ${{ secrets.DEPLOY_PATH }}/current
+            mv ${{ vars.DEPLOY_PATH }}/temp ${{ vars.DEPLOY_PATH }}/current
             echo 'Deployment moved from temp to current'
           "
 
           # Set proper permissions: 755 for directories, 644 for files
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
-              find ${{ secrets.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
-              find ${{ secrets.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
+            if [ -d '${{ vars.DEPLOY_PATH }}/current' ]; then
+              find ${{ vars.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
+              find ${{ vars.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
               echo 'Permissions set: 755 for directories, 644 for files'
             fi
           "
@@ -120,14 +118,14 @@ jobs:
         run: |
           # Check if deployment files exist and are accessible
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            cd ${{ secrets.DEPLOY_PATH }}/current
+            cd ${{ vars.DEPLOY_PATH }}/current
             if [ -f 'index.html' ]; then
               echo 'Deployment files found'
               # Check file permissions
               ls -la index.html
               echo 'Health check passed'
             else
-              echo 'ERROR: index.html not found in deployment directory: ${{ secrets.DEPLOY_PATH }}/current/index.html'
+              echo 'ERROR: index.html not found in deployment directory: ${{ vars.DEPLOY_PATH }}/current/index.html'
               ls -la || echo 'Current directory does not exist'
               exit 1
             fi
@@ -137,14 +135,14 @@ jobs:
       #   if: failure()
       #   run: |
       #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-      #       if [ -d '${{ secrets.DEPLOY_PATH }}/backup' ]; then
-      #         rm -rf ${{ secrets.DEPLOY_PATH }}/current
-      #         mv ${{ secrets.DEPLOY_PATH }}/backup ${{ secrets.DEPLOY_PATH }}/current
+      #       if [ -d '${{ vars.DEPLOY_PATH }}/backup' ]; then
+      #         rm -rf ${{ vars.DEPLOY_PATH }}/current
+      #         mv ${{ vars.DEPLOY_PATH }}/backup ${{ vars.DEPLOY_PATH }}/current
       #         echo 'Rollback completed'
       #         # Set permissions after rollback
-      #         if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
-      #           find ${{ secrets.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
-      #           find ${{ secrets.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
+      #         if [ -d '${{ vars.DEPLOY_PATH }}/current' ]; then
+      #           find ${{ vars.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
+      #           find ${{ vars.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
       #           echo 'Rollback permissions set'
       #         fi
       #       else
