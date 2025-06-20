@@ -60,7 +60,7 @@ jobs:
       - name: Install dependencies
         run: |
           pnpm install --frozen-lockfile
-          pnpm approve-builds
+          pnpm approve-builds --yes
 
       - name: Build project
         run: ${{ inputs.build-command }}
@@ -77,12 +77,9 @@ jobs:
 
       - name: Deploy to server
         run: |
-          # Create deployment directories if they don't exist
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ vars.DEPLOY_PATH }}"
-
           # Create backup of current deployment and remove current
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            if [ -d '${{ vars.DEPLOY_PATH }}/current' ]; then
+            if [ -d ${{ vars.DEPLOY_PATH }}/current ]; then
               rm -rf ${{ vars.DEPLOY_PATH }}/backup
               mv ${{ vars.DEPLOY_PATH }}/current ${{ vars.DEPLOY_PATH }}/backup
             fi
@@ -97,7 +94,7 @@ jobs:
           # Move temp to current (ensure current doesn't exist first)
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             # Double-check current is gone (should be moved to backup above)
-            if [ -d '${{ vars.DEPLOY_PATH }}/current' ]; then
+            if [ -d ${{ vars.DEPLOY_PATH }}/current ]; then
               echo 'Warning: current directory still exists, removing it'
               rm -rf ${{ vars.DEPLOY_PATH }}/current
             fi
@@ -107,7 +104,7 @@ jobs:
 
           # Set proper permissions: 755 for directories, 644 for files
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            if [ -d '${{ vars.DEPLOY_PATH }}/current' ]; then
+            if [ -d ${{ vars.DEPLOY_PATH }}/current ]; then
               find ${{ vars.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
               find ${{ vars.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
               echo 'Permissions set: 755 for directories, 644 for files'
