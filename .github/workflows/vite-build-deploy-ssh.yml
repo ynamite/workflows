@@ -80,7 +80,7 @@ jobs:
           # Create deployment directories if they don't exist
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.DEPLOY_PATH }}"
 
-          # Create backup of current deployment
+          # Create backup of current deployment and remove current
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
               rm -rf ${{ secrets.DEPLOY_PATH }}/backup
@@ -91,9 +91,15 @@ jobs:
           # Upload new build directly to temp directory
           scp -r ${{ inputs.dist-folder }}/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/temp
 
-          # Move temp to current
+          # Move temp to current (ensure current doesn't exist first)
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            # Double-check current is gone (should be moved to backup above)
+            if [ -d '${{ secrets.DEPLOY_PATH }}/current' ]; then
+              echo 'Warning: current directory still exists, removing it'
+              rm -rf ${{ secrets.DEPLOY_PATH }}/current
+            fi
             mv ${{ secrets.DEPLOY_PATH }}/temp ${{ secrets.DEPLOY_PATH }}/current
+            echo 'Deployment moved from temp to current'
           "
 
           # Set proper permissions: 755 for directories, 644 for files
