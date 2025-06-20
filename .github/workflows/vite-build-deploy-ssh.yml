@@ -86,10 +86,12 @@ jobs:
               rm -rf ${{ secrets.DEPLOY_PATH }}/backup
               mv ${{ secrets.DEPLOY_PATH }}/current ${{ secrets.DEPLOY_PATH }}/backup
             fi
+            # Clean up any existing temp directory
+            rm -rf ${{ secrets.DEPLOY_PATH }}/temp            
           "
 
           # Upload new build directly to temp directory
-          scp -r ${{ inputs.dist-folder }}/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/temp
+          scp -r ${{ inputs.dist-folder }}/. ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/temp/
 
           # Move temp to current (ensure current doesn't exist first)
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
@@ -115,14 +117,15 @@ jobs:
         run: |
           # Check if deployment files exist and are accessible
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            if [ -f '${{ secrets.DEPLOY_PATH }}/current/index.html' ]; then
+            cd ${{ secrets.DEPLOY_PATH }}/current
+            if [ -f 'index.html' ]; then
               echo 'Deployment files found'
               # Check file permissions
-              ls -la ${{ secrets.DEPLOY_PATH }}/current/index.html
+              ls -la index.html
               echo 'Health check passed'
             else
               echo 'ERROR: index.html not found in deployment directory: ${{ secrets.DEPLOY_PATH }}/current/index.html'
-              ls -la ${{ secrets.DEPLOY_PATH }}/current/ || echo 'Current directory does not exist'
+              ls -la || echo 'Current directory does not exist'
               exit 1
             fi
           "
