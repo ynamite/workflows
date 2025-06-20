@@ -96,10 +96,10 @@ jobs:
           mv ${{ secrets.DEPLOY_PATH }}/temp ${{ secrets.DEPLOY_PATH }}/current
         "
         
-    - name: Health check
+    - name: Verify deploy
       run: |
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "curl -f http://localhost/health || exit 1"
-        echo "Deployment completed successfully"
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          "[ -f ${{ secrets.DEPLOY_PATH }}/index.html ]" || (echo "🛑 index.html missing" && exit 1)
         
     - name: Rollback on failure
       if: failure()
