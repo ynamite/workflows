@@ -59,7 +59,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --dangerously-allow-all-builds --frozen-lockfile
+          pnpm install --frozen-lockfile
 
       - name: Build project
         run: ${{ inputs.build-command }}
@@ -127,21 +127,21 @@ jobs:
             fi
           "
 
-      # - name: Rollback on failure
-      #   if: failure()
-      #   run: |
-      #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-      #       if [ -d '${{ vars.DEPLOY_PATH }}/backup' ]; then
-      #         rm -rf ${{ vars.DEPLOY_PATH }}/current
-      #         mv ${{ vars.DEPLOY_PATH }}/backup ${{ vars.DEPLOY_PATH }}/current
-      #         echo 'Rollback completed'
-      #         # Set permissions after rollback
-      #         if [ -d '${{ vars.DEPLOY_PATH }}/current' ]; then
-      #           find ${{ vars.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
-      #           find ${{ vars.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
-      #           echo 'Rollback permissions set'
-      #         fi
-      #       else
-      #         echo 'No backup available for rollback'
-      #       fi
-      #     "
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            if [ -d ${{ vars.DEPLOY_PATH }}/backup ]; then
+              rm -rf ${{ vars.DEPLOY_PATH }}/current
+              mv ${{ vars.DEPLOY_PATH }}/backup ${{ vars.DEPLOY_PATH }}/current
+              echo 'Rollback completed'
+              # Set permissions after rollback
+              if [ -d ${{ vars.DEPLOY_PATH }}/current ]; then
+                find ${{ vars.DEPLOY_PATH }}/current -type d -exec chmod 755 {} \;
+                find ${{ vars.DEPLOY_PATH }}/current -type f -exec chmod 644 {} \;
+                echo 'Rollback permissions set'
+              fi
+            else
+              echo 'No backup available for rollback'
+            fi
+          "
