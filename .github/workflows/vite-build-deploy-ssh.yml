@@ -59,7 +59,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile
+          pnpm install --dangerously-allow-all-builds --frozen-lockfile
 
       - name: Build project
         run: ${{ inputs.build-command }}
