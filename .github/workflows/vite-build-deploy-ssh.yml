@@ -121,7 +121,7 @@ jobs:
               ls -la ${{ secrets.DEPLOY_PATH }}/current/index.html
               echo 'Health check passed'
             else
-              echo 'ERROR: index.html not found in deployment directory'
+              echo 'ERROR: index.html not found in deployment directory: ${{ secrets.DEPLOY_PATH }}/current/index.html'
               ls -la ${{ secrets.DEPLOY_PATH }}/current/ || echo 'Current directory does not exist'
               exit 1
             fi
